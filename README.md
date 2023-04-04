@@ -20,7 +20,7 @@ One can find the Preprint at ...
 │   │   └── PROM                                           //A-E plots for the Promoter contribution                         
 │   └── Tables                                             //Correlation tables, coherence tables, peak information table           
 └── Script
-    └── IWBBIO23.R                                         //R scripts for GAGAM construction and meta-analysis
+    └── MAGA.R                                         //R scripts for GAGAM construction and meta-analysis
 ~~~~
 
 ## Script Usage
@@ -38,7 +38,7 @@ Organize the downloaded files in the folder:
 
 Then from inside the Script folder, execute the script with the syntax:
 ```
-Rscript IWBBIO23.R
+Rscript MAGA.R
 ```
 
 It will output all the Figures and Tables in the TMPResults which has the same structure as the Results folder in this repo.

@@ -857,7 +857,7 @@ cluster_scatter_plots <- function (CL_0,name,  log = TRUE, division = "mean", hi
         geom_point(data=as.data.frame(log(CL_0))[highlight_low_var, ], aes(x=Activity, y = Expression), colour="red", size=2) #+ xlim(-150,3)
       #geom_point(data=as.data.frame(log(CL_0))[high_cor_genes, ], aes(x=Activity, y = Expression), colour="red", size=2)
       #dev.off()
-      ggsave(path = paste0("../TMPResults/IMAGES/", folder_name,"/"), filename = paste0(name,"_gene_scatter_plot.png"), width = 1080, height = 1080, units= "px",scale = 3.5)
+      ggsave(path = paste0("../TMPResults/IMAGES/", folder_name,"/"), filename = paste0(name,"_gene_scatter_plot.pdf"), width = 1080, height = 1080, units= "px",scale = 3.5)
     }
     
   }
@@ -869,7 +869,7 @@ cluster_scatter_plots <- function (CL_0,name,  log = TRUE, division = "mean", hi
         theme(plot.title = element_text(hjust = 0.5, size = 30), axis.title = element_text(hjust = 0.5, size = 30))+
         geom_point(data=as.data.frame((CL_0))[highlight_low_var, ], aes(x=Activity, y = Expression), colour="red", size=2)
       #geom_point(data=as.data.frame((CL_0))[high_cor_genes, ], aes(x=Activity, y = Expression), colour="red", size=2)
-      ggsave(path = paste0("../TMPResults/IMAGES/", folder_name,"/"), filename = paste0(name,"_gene_scatter_plot.png"), width = 1080, height = 1080, units= "px",scale = 3.5)
+      ggsave(path = paste0("../TMPResults/IMAGES/", folder_name,"/"), filename = paste0(name,"_gene_scatter_plot.pdf"), width = 1080, height = 1080, units= "px",scale = 3.5)
       #dev.off()
       
     }
@@ -1204,3 +1204,643 @@ write.table(incoherence_factor_enhd,file = "../TMPResults/Tables/incoherence_fac
 
 
 ####################################
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+temp_bin <- refseq_first_gene_matrix[active_prom_name,]
+temp_bin@x[temp_bin@x>0] <- 1
+X <- temp_bin
+
+temp_bin <- RNA_matrix[active_prom_name,]
+temp_bin@x[temp_bin@x > 0] <- 1
+Y <- temp_bin
+
+info_table$JPE <- 0
+info_table_temp <- info_table
+info_table_temp <- info_table_temp[active_prom_name,]
+
+info_table_temp <- info_table_temp %>% rowwise() %>% mutate(JPE = jaccard(X[gene,],Y[gene,]))
+write.table(info_table_temp, file = "info_table_temp.csv")
+info_table_temp <-read.table("info_table_temp.csv")
+
+s <- sapply(info_table_temp$gene, function(x) RI(X[x,],Y[x,]))
+write.table(s, file = "RI.csv")
+
+rownames(info_table_temp) <- info_table_temp$gene
+info_table_temp$RPE <- 0
+for (g in active_prom_name){
+  info_table_temp[info_table_temp$gene == g,]$RPE <- RI(X[g,],Y[g,])
+  print(g)
+  
+}
+
+#####
+low_variance_genes <- (top_n(variance_ratio_table_expr[rownames(CL[CL[,"Expression"] > 0,]),c("active_prom_name",paste0("CL", i-1, "_vst.variance.standardized"))], -1000)["active_prom_name"])$active_prom_name
+prova <- correlation_table[correlation_table$gene %in% low_variance_genes,]
+rm(prova)
+
+
+
+SEU_RNA@assays[["PROM"]]@var.features
+
+pie1 <- data.frame()
+
+#cor <- cor.test(AggProm[["RNA"]][1,], AggProm[["PROM"]][1,])[["p.value"]]
+################
+s <- sapply(info_table_temp$gene, function(x) cor.test(AggProm[["RNA"]][x,], AggProm[["PROM"]][x,])[["estimate"]][["cor"]] )
+info_table_temp$PcorAgg <- s
+s <- sapply(info_table_temp$gene, function(x) cor.test(AggProm[["RNA"]][x,], AggProm[["PROM"]][x,])[["p.value"]] )
+info_table_temp$PcorAgg_pvalue <- s
+
+s <- sapply(info_table_temp$gene, function(x) cor.test(AvgProm[["RNA"]][x,], AvgProm[["PROM"]][x,])[["estimate"]][["cor"]] )
+info_table_temp$PcorAvg <- s
+s <- sapply(info_table_temp$gene, function(x) cor.test(AvgProm[["RNA"]][x,], AvgProm[["PROM"]][x,])[["p.value"]] )
+info_table_temp$PcorAvg_pvalue <- s
+
+
+SCE <- as.SingleCellExperiment(SEU_RNA)
+SCE_MEAN <- aggregateData(SCE,  assay = "logcounts" , by = "RNA_snn_res.0.8", fun = "mean")
+
+correlation_table <- info_table_temp[,1:2]
+correlation_table[,2] <- NULL
+
+AggProm <- AggregateExpression(SEU_RNA, group.by = "RNA_snn_res.0.8", features = active_prom_name)
+AvgProm <- AverageExpression(SEU_RNA, group.by = "RNA_snn_res.0.8", features = active_prom_name)
+
+s <- sapply(correlation_table$gene, function(x) cor.test(AggProm[["RNA"]][x,], AggProm[["PROM"]][x,])[["estimate"]][["cor"]] )
+correlation_table$PcorAgg <- s
+s <- sapply(correlation_table$gene, function(x) cor.test(AggProm[["RNA"]][x,], AggProm[["PROM"]][x,])[["p.value"]] )
+correlation_table$PcorAgg_pvalue <- s
+
+s <- sapply(correlation_table$gene, function(x) cor.test(AvgProm[["RNA"]][x,], AvgProm[["PROM"]][x,])[["estimate"]][["cor"]] )
+correlation_table$PcorAvg <- s
+s <- sapply(correlation_table$gene, function(x) cor.test(AvgProm[["RNA"]][x,], AvgProm[["PROM"]][x,])[["p.value"]] )
+correlation_table$PcorAvg_pvalue <- s
+
+###### AVG - COUNTS ######
+DefaultAssay(SEU_RNA) <- "PROM"
+SCE <- as.SingleCellExperiment(SEU_RNA)
+Sce_mean_Act <- aggregateData(SCE,  assay = "counts" , by = "RNA_snn_res.0.8", fun = "mean")
+Sce_mean_Act <- Sce_mean_Act@assays@data@listData[[1]]
+Sce_mean_Act <- Sce_mean_Act[active_prom_name,]
+
+DefaultAssay(SEU_RNA) <- "RNA"
+SCE <- as.SingleCellExperiment(SEU_RNA)
+Sce_mean_Expr <- aggregateData(SCE,  assay = "counts" , by = "RNA_snn_res.0.8", fun = "mean")
+Sce_mean_Expr <- Sce_mean_Expr@assays@data@listData[[1]]
+Sce_mean_Expr <- Sce_mean_Expr[active_prom_name,]
+
+
+
+s <- sapply(correlation_table$gene, function(x) cor.test(Sce_mean_Act[x,], Sce_mean_Expr[x,])[["estimate"]][["cor"]] )
+correlation_table$PcorAvg_m <- s
+s <- sapply(correlation_table$gene, function(x) cor.test(Sce_mean_Act[x,], Sce_mean_Expr[x,])[["p.value"]] )
+correlation_table$PcorAvg_m_pvalue <- s
+
+
+
+CL <- cbind(Sce_mean_Act[,1], Sce_mean_Expr[,1])
+colnames(CL) <- c("Activity", "Expression")
+row <- number_correlated_genes(CL, name = paste0("CL_0"))
+number_genes_table_prom <- rbind(row)
+for (i in (1:length(colnames(Sce_mean_Expr)))){
+  CL <- cbind(Sce_mean_Act[,i], Sce_mean_Expr[,i])
+  colnames(CL) <- c("Activity", "Expression")
+  cluster_scatter_plots(CL, name = paste0("CL_", i-1))
+  if(i>1){
+    row <- number_correlated_genes(CL, name = paste0("CL_", i-1))
+    number_genes_table_prom <- rbind(number_genes_table_prom,row)
+  }
+}
+
+CL <- cbind(Sce_mean_Act[,1], Sce_mean_Expr[,1])
+colnames(CL) <- c("Activity", "Expression")
+row <- incoherence_factor(CL, name = paste0("CL_0"))
+row <- (row/sum(row))*100
+incoherence_factor_prom <- rbind(row)
+for (i in (1:length(colnames(Sce_mean_Expr)))){
+  CL <- cbind(Sce_mean_Act[,i], Sce_mean_Expr[,i])
+  colnames(CL) <- c("Activity", "Expression")
+  if(i>1){
+    row <- incoherence_factor(CL, name = paste0("CL_", i-1), log = FALSE)
+    row <- (row/sum(row))*100
+    incoherence_factor_prom <- rbind(incoherence_factor_prom, row)
+  }
+}
+
+
+###### AVG - LOGCOUNTS ######
+DefaultAssay(SEU_RNA) <- "PROM"
+SCE <- as.SingleCellExperiment(SEU_RNA)
+Sce_mean_Act <- aggregateData(SCE,  assay = "logcounts" , by = "RNA_snn_res.0.8", fun = "mean")
+Sce_mean_Act <- Sce_mean_Act@assays@data@listData[[1]]
+Sce_mean_Act <- Sce_mean_Act[active_prom_name,]
+
+DefaultAssay(SEU_RNA) <- "RNA"
+SCE <- as.SingleCellExperiment(SEU_RNA)
+Sce_mean_Expr <- aggregateData(SCE,  assay = "logcounts" , by = "RNA_snn_res.0.8", fun = "mean")
+Sce_mean_Expr <- Sce_mean_Expr@assays@data@listData[[1]]
+Sce_mean_Expr <- Sce_mean_Expr[active_prom_name,]
+
+s <- sapply(correlation_table$gene, function(x) cor.test(Sce_mean_Act[x,], Sce_mean_Expr[x,])[["estimate"]][["cor"]] )
+correlation_table$PcorAvg_m_log <- s
+s <- sapply(correlation_table$gene, function(x) cor.test(Sce_mean_Act[x,], Sce_mean_Expr[x,])[["p.value"]] )
+correlation_table$PcorAvg_m_log_pvalue <- s
+
+
+
+CL <- cbind(Sce_mean_Act[,1], Sce_mean_Expr[,1])
+colnames(CL) <- c("Activity", "Expression")
+row <- number_correlated_genes(CL, name = paste0("CL_0"))
+number_genes_table_prom <- rbind(row)
+
+
+for (i in (1:length(colnames(Sce_mean_Expr)))){
+  CL <- cbind(Sce_mean_Act[,i], Sce_mean_Expr[,i])
+  colnames(CL) <- c("Activity", "Expression")
+   
+  cluster_scatter_plots(CL, name = paste0("CL_", i-1))
+  if(i>1){
+    row <- number_correlated_genes(CL, name = paste0("CL_", i-1))
+    number_genes_table_prom <- rbind(number_genes_table_prom,row)
+  }
+}
+
+
+###### MEDIAN - COUNTS ######
+DefaultAssay(SEU_RNA) <- "PROM"
+SCE <- as.SingleCellExperiment(SEU_RNA)
+Sce_mean_Act <- aggregateData(SCE,  assay = "counts" , by = "RNA_snn_res.0.8", fun = "median")
+Sce_mean_Act <- Sce_mean_Act@assays@data@listData[[1]]
+Sce_mean_Act <- Sce_mean_Act[active_prom_name,]
+
+DefaultAssay(SEU_RNA) <- "RNA"
+SCE <- as.SingleCellExperiment(SEU_RNA)
+Sce_mean_Expr <- aggregateData(SCE,  assay = "counts" , by = "RNA_snn_res.0.8", fun = "median")
+Sce_mean_Expr <- Sce_mean_Expr@assays@data@listData[[1]]
+Sce_mean_Expr <- Sce_mean_Expr[active_prom_name,]
+
+s <- sapply(correlation_table$gene, function(x) cor.test(Sce_mean_Act[x,], Sce_mean_Expr[x,])[["estimate"]][["cor"]] )
+correlation_table$PcorMed_m <- s
+s <- sapply(correlation_table$gene, function(x) cor.test(Sce_mean_Act[x,], Sce_mean_Expr[x,])[["p.value"]] )
+correlation_table$PcorMed_m_pvalue <- s
+
+###### MEDIAN - LOGCOUNTS ######
+DefaultAssay(SEU_RNA) <- "PROM"
+SCE <- as.SingleCellExperiment(SEU_RNA)
+Sce_mean_Act <- aggregateData(SCE,  assay = "logcounts" , by = "RNA_snn_res.0.8", fun = "median")
+Sce_mean_Act <- Sce_mean_Act@assays@data@listData[[1]]
+Sce_mean_Act <- Sce_mean_Act[active_prom_name,]
+
+DefaultAssay(SEU_RNA) <- "RNA"
+SCE <- as.SingleCellExperiment(SEU_RNA)
+Sce_mean_Expr <- aggregateData(SCE,  assay = "logcounts" , by = "RNA_snn_res.0.8", fun = "median")
+Sce_mean_Expr <- Sce_mean_Expr@assays@data@listData[[1]]
+Sce_mean_Expr <- Sce_mean_Expr[active_prom_name,]
+
+s <- sapply(correlation_table$gene, function(x) cor.test(Sce_mean_Act[x,], Sce_mean_Expr[x,])[["estimate"]][["cor"]] )
+correlation_table$PcorMed_m_log <- s
+s <- sapply(correlation_table$gene, function(x) cor.test(Sce_mean_Act[x,], Sce_mean_Expr[x,])[["p.value"]] )
+correlation_table$PcorMed_m_log_pvalue <- s
+######################
+
+##################### EXon contribution #############
+
+DefaultAssay(SEU_RNA) <- "EXON"
+SCE <- as.SingleCellExperiment(SEU_RNA)
+Sce_mean_Act <- aggregateData(SCE,  assay = "counts" , by = "RNA_snn_res.0.8", fun = "mean")
+Sce_mean_Act <- Sce_mean_Act@assays@data@listData[[1]]
+axon_genes <- rownames(Sce_mean_Act)#[rownames(Sce_mean_Act) %in% active_prom_name]
+Sce_mean_Act <- Sce_mean_Act[exon_prom_name,]
+
+DefaultAssay(SEU_RNA) <- "RNA"
+SCE <- as.SingleCellExperiment(SEU_RNA)
+Sce_mean_Expr <- aggregateData(SCE,  assay = "counts" , by = "RNA_snn_res.0.8", fun = "mean")
+Sce_mean_Expr <- Sce_mean_Expr@assays@data@listData[[1]]
+Sce_mean_Expr <- Sce_mean_Expr[exon_prom_name,]
+
+exon_prom_name <- rownames(Sce_mean_Act)
+exon_no_expr <- exon_prom_name[!(rownames(info_table) %in% rownames(RNA_matrix))]
+exon_prom_name <- exon_prom_name[!(exon_prom_name %in% active_no_expr)]
+
+correlation_table_exon <- info_table_temp[,1:2]
+correlation_table_exon <- correlation_table_exon[correlation_table_exon$gene %in% exon_prom_name,]
+correlation_table_exon[,2] <- NULL
+
+
+s <- sapply(correlation_table_exon$gene, function(x) cor.test(Sce_mean_Act[x,], Sce_mean_Expr[x,])[["estimate"]][["cor"]] )
+correlation_table_exon$PcorAvg_m <- s
+s <- sapply(correlation_table_exon$gene, function(x) cor.test(Sce_mean_Act[x,], Sce_mean_Expr[x,])[["p.value"]] )
+correlation_table_exon$PcorAvg_m_pvalue <- s
+
+
+
+CL <- cbind(Sce_mean_Act[,1], Sce_mean_Expr[,1])
+colnames(CL) <- c("Activity", "Expression")
+row <- number_correlated_genes(CL, name = paste0("CL_0"))
+number_genes_table_exon <- rbind(row)
+for (i in (1:length(colnames(Sce_mean_Expr)))){
+  CL <- cbind(Sce_mean_Act[,i], Sce_mean_Expr[,i])
+  colnames(CL) <- c("Activity", "Expression")
+  cluster_scatter_plots(CL, name = paste0("CL_", i-1), log = TRUE)
+  if(i>1){
+    row <- number_correlated_genes(CL, name = paste0("CL_", i-1))
+    number_genes_table_exon <- rbind(number_genes_table_exon, row)
+  }
+}
+
+
+me <- mean (log(Sce_mean_Expr)[log(Sce_mean_Expr) > -Inf])
+ma <- mean (log(Sce_mean_Act)[log(Sce_mean_Act) > -Inf])
+CL <- cbind(Sce_mean_Act[,1], Sce_mean_Expr[,1])
+colnames(CL) <- c("Activity", "Expression")
+row <- number_correlated_genes_lines(CL,limex = me, limacc = ma, name = paste0("CL_0"), log = TRUE)
+number_genes_table_exon <- rbind(row)
+for (i in (1:length(colnames(Sce_mean_Expr)))){
+  CL <- cbind(Sce_mean_Act[,i], Sce_mean_Expr[,i])
+  colnames(CL) <- c("Activity", "Expression")
+  cluster_scatter_plots(CL, name = paste0("CL_", i-1), log = TRUE)
+  if(i>1){
+    row <- number_correlated_genes_lines(CL,limex = me, limacc = ma, name = paste0("CL_", i-1), log = TRUE)
+    number_genes_table_exon <- rbind(number_genes_table_exon, row)
+    
+  }
+}
+
+
+
+CL <- cbind(Sce_mean_Act[,1], Sce_mean_Expr[,1])
+colnames(CL) <- c("Activity", "Expression")
+row <- incoherence_factor(CL, name = paste0("CL_0"))
+row <- (row/sum(row))*100
+incoherence_factor_exon <- rbind(row)
+for (i in (1:length(colnames(Sce_mean_Expr)))){
+  CL <- cbind(Sce_mean_Act[,i], Sce_mean_Expr[,i])
+  colnames(CL) <- c("Activity", "Expression")
+  if(i>1){
+    row <- incoherence_factor(CL, name = paste0("CL_", i-1), log = FALSE)
+    row <- (row/sum(row))*100
+    incoherence_factor_exon <- rbind(incoherence_factor_exon, row)
+  }
+}
+
+
+##### LOG ######
+DefaultAssay(SEU_RNA) <- "EXON"
+SCE <- as.SingleCellExperiment(SEU_RNA)
+Sce_mean_Act <- aggregateData(SCE,  assay = "logcounts" , by = "RNA_snn_res.0.8", fun = "mean")
+Sce_mean_Act <- Sce_mean_Act@assays@data@listData[[1]]
+axon_genes <- rownames(Sce_mean_Act)#[rownames(Sce_mean_Act) %in% active_prom_name]
+Sce_mean_Act <- Sce_mean_Act[exon_prom_name,]
+
+DefaultAssay(SEU_RNA) <- "RNA"
+SCE <- as.SingleCellExperiment(SEU_RNA)
+Sce_mean_Expr <- aggregateData(SCE,  assay = "logcounts" , by = "RNA_snn_res.0.8", fun = "mean")
+Sce_mean_Expr <- Sce_mean_Expr@assays@data@listData[[1]]
+Sce_mean_Expr <- Sce_mean_Expr[exon_prom_name,]
+
+exon_prom_name <- rownames(Sce_mean_Act)
+exon_no_expr <- exon_prom_name[!(rownames(info_table) %in% rownames(RNA_matrix))]
+exon_prom_name <- exon_prom_name[!(exon_prom_name %in% active_no_expr)]
+
+correlation_table_exon <- info_table_temp[,1:2]
+correlation_table_exon <- correlation_table_exon[correlation_table_exon$gene %in% exon_prom_name,]
+correlation_table_exon[,2] <- NULL
+
+
+s <- sapply(correlation_table_exon$gene, function(x) cor.test(Sce_mean_Act[x,], Sce_mean_Expr[x,])[["estimate"]][["cor"]] )
+correlation_table_exon$PcorAvg_m <- s
+s <- sapply(correlation_table_exon$gene, function(x) cor.test(Sce_mean_Act[x,], Sce_mean_Expr[x,])[["p.value"]] )
+correlation_table_exon$PcorAvg_m_pvalue <- s
+
+
+
+CL <- cbind(Sce_mean_Act[,1], Sce_mean_Expr[,1])
+colnames(CL) <- c("Activity", "Expression")
+row <- number_correlated_genes(CL, name = paste0("CL_0"))
+number_genes_table_exon <- rbind(row)
+for (i in (1:length(colnames(Sce_mean_Expr)))){
+  CL <- cbind(Sce_mean_Act[,i], Sce_mean_Expr[,i])
+  colnames(CL) <- c("Activity", "Expression")
+  cluster_scatter_plots(CL, name = paste0("CL_", i-1), log = TRUE)
+  if(i>1){
+    row <- number_correlated_genes(CL, name = paste0("CL_", i-1))
+    number_genes_table_exon <- rbind(number_genes_table_exon, row)
+  }
+}
+
+
+me <- mean (log(Sce_mean_Expr)[log(Sce_mean_Expr) > -Inf])
+ma <- mean (log(Sce_mean_Act)[log(Sce_mean_Act) > -Inf])
+CL <- cbind(Sce_mean_Act[,1], Sce_mean_Expr[,1])
+colnames(CL) <- c("Activity", "Expression")
+row <- number_correlated_genes_lines(CL,limex = me, limacc = ma, name = paste0("CL_0"), log = TRUE)
+number_genes_table_exon <- rbind(row)
+for (i in (1:length(colnames(Sce_mean_Expr)))){
+  CL <- cbind(Sce_mean_Act[,i], Sce_mean_Expr[,i])
+  colnames(CL) <- c("Activity", "Expression")
+  cluster_scatter_plots(CL, name = paste0("CL_", i-1), log = TRUE)
+  if(i>1){
+    row <- number_correlated_genes_lines(CL,limex = me, limacc = ma, name = paste0("CL_", i-1), log = TRUE)
+    number_genes_table_exon <- rbind(number_genes_table_exon, row)
+  }
+}
+
+
+
+CL <- cbind(Sce_mean_Act[,1], Sce_mean_Expr[,1])
+colnames(CL) <- c("Activity", "Expression")
+row <- incoherence_factor(CL, name = paste0("CL_0"))
+row <- (row/sum(row))*100
+incoherence_factor_exon <- rbind(row)
+for (i in (1:length(colnames(Sce_mean_Expr)))){
+  CL <- cbind(Sce_mean_Act[,i], Sce_mean_Expr[,i])
+  colnames(CL) <- c("Activity", "Expression")
+  if(i>1){
+    row <- incoherence_factor(CL, name = paste0("CL_", i-1), log = FALSE)
+    row <- (row/sum(row))*100
+    incoherence_factor_exon <- rbind(incoherence_factor_exon, row)
+  }
+}
+
+
+
+mean(Sce_mean_Expr)
+mean(Sce_mean_Act)
+
+########### ENHD Contribution ##########
+
+
+atac <- CreateAssayObject(enhd_contribution)
+#SEU_RNA[["ENHD"]] <- atac
+SEU_EHND <- CreateSeuratObject(atac, assay = "ENHD")
+DefaultAssay(SEU_EHND) <- "ENHD"
+SEU_EHND <- NormalizeData(SEU_EHND)
+SEU_EHND <- AddMetaData(SEU_EHND, SEU_RNA@meta.data[["RNA_snn_res.0.8"]], col.name = "RNA_snn_res.0.8")
+
+SCE <- as.SingleCellExperiment(SEU_EHND)
+Sce_mean_Act <- aggregateData(SCE,  assay = "counts" , by = "RNA_snn_res.0.8", fun = "mean")
+Sce_mean_Act <- Sce_mean_Act@assays@data@listData[[1]]
+Sce_mean_Act <- Sce_mean_Act[active_prom_name,]
+
+DefaultAssay(SEU_RNA) <- "RNA"
+SCE <- as.SingleCellExperiment(SEU_RNA)
+Sce_mean_Expr <- aggregateData(SCE,  assay = "counts" , by = "RNA_snn_res.0.8", fun = "mean")
+Sce_mean_Expr <- Sce_mean_Expr@assays@data@listData[[1]]
+Sce_mean_Expr <- Sce_mean_Expr[active_prom_name,]
+
+correlation_table_enhd <- info_table_temp[,1:2]
+correlation_table_enhd <- correlation_table_enhd[correlation_table_enhd$gene %in% active_prom_name,]
+correlation_table_enhd[,2] <- NULL
+
+s <- sapply(correlation_table_enhd$gene, function(x) cor.test(Sce_mean_Act[x,], Sce_mean_Expr[x,])[["estimate"]][["cor"]] )
+correlation_table_enhd$PcorAvg_m <- s
+s <- sapply(correlation_table_enhd$gene, function(x) cor.test(Sce_mean_Act[x,], Sce_mean_Expr[x,])[["p.value"]] )
+correlation_table_enhd$PcorAvg_m_pvalue <- s
+
+
+
+CL <- cbind(Sce_mean_Act[,1], Sce_mean_Expr[,1])
+colnames(CL) <- c("Activity", "Expression")
+row <- number_correlated_genes(CL, name = paste0("CL_0"))
+number_genes_table_enhd <- rbind(row)
+for (i in (1:length(colnames(Sce_mean_Expr)))){
+  CL <- cbind(Sce_mean_Act[,i], Sce_mean_Expr[,i])
+  colnames(CL) <- c("Activity", "Expression")
+  cluster_scatter_plots(CL, name = paste0("CL_", i-1))
+  if(i>1){
+    row <- number_correlated_genes(CL, name = paste0("CL_", i-1))
+    number_genes_table_enhd <- rbind(number_genes_table_enhd,row)
+  }
+}
+
+CL <- cbind(Sce_mean_Act[,1], Sce_mean_Expr[,1])
+colnames(CL) <- c("Activity", "Expression")
+row <- incoherence_factor(CL, name = paste0("CL_0"))
+row <- (row/sum(row))*100
+incoherence_factor_enhd <- rbind(row)
+for (i in (1:length(colnames(Sce_mean_Expr)))){
+  CL <- cbind(Sce_mean_Act[,i], Sce_mean_Expr[,i])
+  colnames(CL) <- c("Activity", "Expression")
+  if(i>1){
+    row <- incoherence_factor(CL, name = paste0("CL_", i-1), log = FALSE)
+    row <- (row/sum(row))*100
+    incoherence_factor_enhd <- rbind(incoherence_factor_enhd, row)
+  }
+}
+
+
+#### LOG 
+
+SCE <- as.SingleCellExperiment(SEU_EHND)
+Sce_mean_Act <- aggregateData(SCE,  assay = "logcounts" , by = "RNA_snn_res.0.8", fun = "mean")
+Sce_mean_Act <- Sce_mean_Act@assays@data@listData[[1]]
+Sce_mean_Act <- Sce_mean_Act[active_prom_name,]
+
+DefaultAssay(SEU_RNA) <- "RNA"
+SCE <- as.SingleCellExperiment(SEU_RNA)
+Sce_mean_Expr <- aggregateData(SCE,  assay = "logcounts" , by = "RNA_snn_res.0.8", fun = "mean")
+Sce_mean_Expr <- Sce_mean_Expr@assays@data@listData[[1]]
+Sce_mean_Expr <- Sce_mean_Expr[active_prom_name,]
+
+correlation_table_enhd <- info_table_temp[,1:2]
+correlation_table_enhd <- correlation_table_enhd[correlation_table_enhd$gene %in% active_prom_name,]
+correlation_table_enhd[,2] <- NULL
+
+s <- sapply(correlation_table_enhd$gene, function(x) cor.test(Sce_mean_Act[x,], Sce_mean_Expr[x,])[["estimate"]][["cor"]] )
+correlation_table_enhd$PcorAvg_m <- s
+s <- sapply(correlation_table_enhd$gene, function(x) cor.test(Sce_mean_Act[x,], Sce_mean_Expr[x,])[["p.value"]] )
+correlation_table_enhd$PcorAvg_m_pvalue <- s
+
+
+
+CL <- cbind(Sce_mean_Act[,1], Sce_mean_Expr[,1])
+colnames(CL) <- c("Activity", "Expression")
+row <- number_correlated_genes(CL, name = paste0("CL_0"))
+number_genes_table_enhd <- rbind(row)
+for (i in (1:length(colnames(Sce_mean_Expr)))){
+  CL <- cbind(Sce_mean_Act[,i], Sce_mean_Expr[,i])
+  colnames(CL) <- c("Activity", "Expression")
+  cluster_scatter_plots(CL, name = paste0("CL_", i-1))
+  if(i>1){
+    row <- number_correlated_genes(CL, name = paste0("CL_", i-1))
+    number_genes_table_enhd <- rbind(number_genes_table_enhd,row)
+  }
+}
+
+CL <- cbind(Sce_mean_Act[,1], Sce_mean_Expr[,1])
+colnames(CL) <- c("Activity", "Expression")
+row <- incoherence_factor(CL, name = paste0("CL_0"))
+row <- (row/sum(row))*100
+incoherence_factor_enhd <- rbind(row)
+for (i in (1:length(colnames(Sce_mean_Expr)))){
+  CL <- cbind(Sce_mean_Act[,i], Sce_mean_Expr[,i])
+  colnames(CL) <- c("Activity", "Expression")
+  if(i>1){
+    row <- incoherence_factor(CL, name = paste0("CL_", i-1), log = FALSE)
+    row <- (row/sum(row))*100
+    incoherence_factor_enhd <- rbind(incoherence_factor_enhd, row)
+  }
+}
+
+
+###############
+
+mean (log(Sce_mean_Expr)[log(Sce_mean_Expr) > -Inf])
+
+mean ((Sce_mean_Expr)[(Sce_mean_Expr) > -Inf])
+
+
+
+
+
+
+
+median(correlation_table$PcorAvg_m[1])
+
+
+name = paste0("CL_", i-1)
+png(paste0("../TMPResults/IMAGES/",name,"_gene_scatter_plot.png"), width = 1080, height = 1080)
+ggplot(as.data.frame(log(CL_0)), aes(x=Activity, y = Expression)) + geom_point() + geom_hline(yintercept = colMeans(log(CL_0)[log(CL_0)[,2] > -Inf,])[2], linetype="dashed", color = "red", size=2) + 
+  geom_vline(xintercept = colMeans(log(CL_0)[log(CL_0)[,1] > -Inf,])[1], linetype="dashed", color = "red", size=2)+ ggtitle(name)+ ggtitle("CL_0") +
+  theme(plot.title = element_text(hjust = 0.5))#+
+#geom_point(data=as.data.frame(log(CL_0))[high_cor_genes, ], aes(x=Activity, y = Expression), colour="red", size=2)
+print(plot)
+ggsave(path = "../TMPResults/IMAGES/", filename = paste0(name,"_gene_scatter_plot.png"), width = 1080, height = 1080, units= "px", scale = 3.5)
+
+dev.off()
+
+
+
+
+
+
+
+ggplot(as.data.frame(log(CL_0)), aes(x=Activity, y = Expression)) + geom_point() + geom_hline(yintercept = colMeans(log(CL_0)[log(CL_0)[,2] > -Inf,])[2], linetype="dashed", color = "red", size=2) + 
+  geom_vline(xintercept = colMeans(log(CL_0)[log(CL_0)[,1] > -Inf,])[1], linetype="dashed", color = "red", size=2)#+
+#geom_point(data=as.data.frame(log(CL_0))[high_cor_genes, ], aes(x=V1, y = V2), colour="red", size=2)
+
+
+CL_0 <- cbind(Sce_mean_Act[,1], Sce_mean_Expr[,1])
+colnames(CL_0) <- c("Activity", "Expression")
+gene <- rbind(Sce_mean_Act["KLF4",], Sce_mean_Expr["KLF4",])
+gene <- t(gene)
+
+high_cor_genes <- correlation_table[correlation_table$PcorAvg_m > 0.8,]$gene
+
+ggplot(as.data.frame((CL_0)), aes(x=Activity, y =Expression)) + geom_point() + geom_hline(yintercept = colMedians((CL_0))[2], linetype="dashed", color = "red", size=2) + geom_vline(xintercept = colMedians((CL_0))[1], linetype="dashed", color = "red", size=2)+
+  geom_point(data=as.data.frame((CL_0))[high_cor_genes, ], aes(x=V1, y = V2), colour="red", size=2) +ylim(0,1)
+
+ggplot(as.data.frame(log(CL_0)), aes(x=V1, y = V2)) + geom_point() + geom_hline(yintercept = colMeans(log(CL_0)[log(CL_0)[,2] > -Inf,])[2], linetype="dashed", color = "red", size=2) + geom_vline(xintercept = colMeans(log(CL_0)[log(CL_0)[,1] > -Inf,])[1], linetype="dashed", color = "red", size=2)+
+  geom_point(data=as.data.frame(log(CL_0))[high_cor_genes, ], aes(x=V1, y = V2), colour="red", size=2)
+
+ggplot(as.data.frame(gene), aes(x=V1, y = V2)) + geom_point()+ geom_text(label=rownames(as.data.frame(gene)))
+
+colMeans(CL_0)
+sum(log(CL_0)[,1] >= colMeans(log(CL_0)[log(CL_0)[,1] > -Inf,])[1] & log(CL_0)[,2] >= colMeans(log(CL_0)[log(CL_0)[,2] > -Inf,])[2])
+sum(log(CL_0)[,1] >= colMeans(log(CL_0)[log(CL_0)[,1] > -Inf,])[1] & log(CL_0)[,2] < colMeans(log(CL_0)[log(CL_0)[,2] > -Inf,])[2])
+sum(log(CL_0)[,1] < colMeans(log(CL_0)[log(CL_0)[,1] > -Inf,])[1] & log(CL_0)[,2] >= colMeans(log(CL_0)[log(CL_0)[,2] > -Inf,])[2])
+sum(log(CL_0)[,1] < colMeans(log(CL_0)[log(CL_0)[,1] > -Inf,])[1] & log(CL_0)[,2] < colMeans(log(CL_0)[log(CL_0)[,2] > -Inf,])[2])
+
+log(CL_0)[log(CL_0)[,1] > -Inf,]
+
+
+
+
+
+
+
+
+
+
+
+
+
+temp_bin <- refseq_first_gene_matrix[active_prom_name,]
+X <- temp_bin
+temp_bin <- RNA_matrix[active_prom_name,]
+Y <- temp_bin
+s <- sapply(info_table_temp$gene, function(x) cor.test(X[x,], Y[x,])[["estimate"]][["cor"]] )
+info_table_temp$Pcor_SC <- s
+
+correlation_table <- info_table_temp[,1:2]
+correlation_table[,2] <- NULL
+
+
+filtered_info <- info_table_temp %>%
+                  filter(PcorAgg_pvalue < 0.05) %>%
+                  filter(PcorAvg_pvalue < 0.05)
+
+ggscatter(filtered_info, x= "PcorAgg", y = "PcorAvg")
+ggscatter(AggProm, x= "PcorAgg", y = "PcorAvg")
+
+prova <- rbind(t(as.data.frame(AggProm[["RNA"]])),t(as.data.frame(AggProm[["RNA"]])))
+prova <- t(prova)
+pr <- cbind(as.data.frame(prova[,1]), as.data.frame(prova[,20]))
+ggplot(pr) + geom_jitter(x= prova[,1], y = prova[,20])
+ggscatter(prova, x= 1, y = 20 )
+
+
+
+
+
+#########
+s <- apply(refseq_promoter_gene_mat,1, function(x) names(which(x > 0)) )
+info_table$prom_peaks <- s
+s <- apply(refseq_allgene_gene_mat, 1, function(x) names(which(x > 0)))
+info_table$ex_peaks <- NA
+info_table[names(s),]$ ex_peaks <- s
+
+
+s <- apply(refseq_allgene_gene_mat, 1, function(x) names(which(x > 0)))
+write.table(s, file = "RI.csv")
+
+
+for (i in rownames(refseq_promoter_gene_mat)){
+  info_table[i,]$prom_peaks <- as.list(names(which(refseq_promoter_gene_mat[i,] > 0)))
+}
+
+s <- apply(refseq_promoter_gene_mat,1, function(x) names(which(x > 0)) )
+info_table_temp$RPE <- s
+
+
+RNA_ex <- CDS_RNA@assays@data@listData[["counts"]]["C3",]
+temp_bin <- refseq_allgene_gene_matrix
+temp_bin@x[temp_bin@x>0] <- 1
+ACT_ex <- temp_bin["C3",]
+sum(RNA_ex)
+sum(ACT_ex)
+open_ex_names <- names(which(ACT_ex > 0))
+expr_ex_names <- names(which(RNA_ex > 0))
+sum(expr_ex_names %in% open_ex_names)
+
+RI(RNA_ex,ACT_ex)
+
+CreateAssayObject(counts = refseq_allgene_gene_mat)
+
